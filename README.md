@@ -1,2 +1,2 @@
 # nebula-writeup
-a writeup for exploit.education/nebula
+a writeup for https://exploit.education/nebula
