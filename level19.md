@@ -49,3 +49,5 @@ Program flow:
 Ideas for exploitation:
 * schedule a `cron` job to run the process (`cron` is a root owned daemon)
   * `cron` executes commands using a user owned shell, thus the parent of our process will not be root `cron`.
+* kill the parent process, cause child to move to a new parent - root `init` process
+  * race condition, parent should be killed before child executes critical code parts
