@@ -53,6 +53,8 @@ Ideas for exploitation:
   * race condition, parent should be killed before child executes critical code parts
 
 ### Init Parent Process
+In Linux, when a parent process dies, all it's children processes are moved to a new parent - the `init` process with PID of `1`. This new parent process belongs to the user `root`.
+
 I found that executing `sh -c 'COMMAND &'` will cause the wanted effect.
 ```console
 level19@nebula:/home/flag19$ sh -c './flag19 -c "echo hello world"&'
